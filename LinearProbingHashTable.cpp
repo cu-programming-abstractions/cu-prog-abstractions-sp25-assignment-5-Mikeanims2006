@@ -1,42 +1,101 @@
 #include "LinearProbingHashTable.h"
 using namespace std;
 
-LinearProbingHashTable::LinearProbingHashTable(HashFunction<string> hashFn) {
-    /* TODO: Delete this comment and the next line, then implement this function. */
-    (void) hashFn;
+LinearProbingHashTable::LinearProbingHashTable(HashFunction<std::string> hashFn)
+    : hashFn(hashFn), logicalSize(0), numSlots(hashFn.numSlots()) {
+    elems = new Slot[numSlots];
+    for (int i = 0; i < numSlots; i++) {
+        elems[i].type = SlotType::EMPTY;
+    }
 }
 
 LinearProbingHashTable::~LinearProbingHashTable() {
-    /* TODO: Delete this comment, then implement this function. */
+    delete[] elems;
 }
 
 int LinearProbingHashTable::size() const {
-    /* TODO: Delete this comment and the next lines, then implement this function. */
-    return -1;
+    return logicalSize;
 }
 
 bool LinearProbingHashTable::isEmpty() const {
-    /* TODO: Delete this comment and the next lines, then implement this function. */
+    return logicalSize == 0;
+}
+
+bool LinearProbingHashTable::insert(const string& key) {
+    int index = hashFn(key);
+    int tombstoneIndex = -1;
+
+    for (int i = 0; i < numSlots; i++) {
+        int probe = (index + i) % numSlots;
+
+        if (elems[probe].type == SlotType::FILLED) {
+            if (elems[probe].value == key) {
+                return false; // key already exists
+            }
+        } else if (elems[probe].type == SlotType::TOMBSTONE) {
+            if (tombstoneIndex == -1) {
+                tombstoneIndex = probe; // remember the first tombstone
+            }
+        } else if (elems[probe].type == SlotType::EMPTY) {
+            if (tombstoneIndex != -1) {
+                elems[tombstoneIndex].value = key;
+                elems[tombstoneIndex].type = SlotType::FILLED;
+            } else {
+                elems[probe].value = key;
+                elems[probe].type = SlotType::FILLED;
+            }
+            logicalSize++;
+            return true;
+        }
+    }
+
+    // If we only saw tombstones, insert there
+    if (tombstoneIndex != -1) {
+        elems[tombstoneIndex].value = key;
+        elems[tombstoneIndex].type = SlotType::FILLED;
+        logicalSize++;
+        return true;
+    }
+
+    return false; // Table is full
+}
+
+
+bool LinearProbingHashTable::contains(const string& key) const {
+    int index = hashFn(key);
+    for (int i = 0; i < numSlots; i++) {
+        int probe = (index + i) % numSlots;
+
+        if (elems[probe].type == SlotType::EMPTY) {
+            return false; // Not found
+        }
+
+        if (elems[probe].type == SlotType::FILLED && elems[probe].value == key) {
+            return true;
+        }
+    }
     return false;
 }
 
-bool LinearProbingHashTable::insert(const string& elem) {
-    /* TODO: Delete this comment and the next lines, then implement this function. */
-    (void) elem;
+
+bool LinearProbingHashTable::remove(const string& key) {
+    int index = hashFn(key);
+    for (int i = 0; i < numSlots; i++) {
+        int probe = (index + i) % numSlots;
+
+        if (elems[probe].type == SlotType::EMPTY) {
+            return false; // Not found
+        }
+
+        if (elems[probe].type == SlotType::FILLED && elems[probe].value == key) {
+            elems[probe].type = SlotType::TOMBSTONE;
+            logicalSize--;
+            return true;
+        }
+    }
     return false;
 }
 
-bool LinearProbingHashTable::contains(const string& elem) const {
-    /* TODO: Delete this comment and the next lines, then implement this function. */
-    (void) elem;
-    return false;
-}
-
-bool LinearProbingHashTable::remove(const string& elem) {
-    /* TODO: Delete this comment and the next lines, then implement this function. */
-    (void) elem;
-    return false;
-}
 
 
 /* * * * * * Test Cases Below This Point * * * * * */
